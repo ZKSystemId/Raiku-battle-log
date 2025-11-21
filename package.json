@@ -1,0 +1,25 @@
+{
+  "name": "raiku-deterministic-battle-sim",
+  "version": "1.1.0",
+  "description": "Deterministic Battle Simulator demo for Raiku deterministic execution challenge with battle log hashing",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "simulate": "ts-node src/index.ts",
+    "simulate:js": "node dist/index.js"
+  },
+  "keywords": [
+    "solana",
+    "raiku",
+    "deterministic",
+    "battle-simulator",
+    "hash"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}

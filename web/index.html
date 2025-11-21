@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Raiku Deterministic Battle Simulator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: radial-gradient(circle at top, #0f172a 0, #020617 45%, #000 100%);
+    }
+    .glass {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+    .hp-bar {
+      transition: width 0.4s ease-out;
+    }
+    .scrollbar-thin::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.6);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100 antialiased">
+  <div class="max-w-6xl mx-auto px-4 py-6 md:py-10">
+    <header class="mb-6 md:mb-10">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <p class="text-xs uppercase tracking-[0.3em] text-sky-400/80 mb-2">Raiku · Deterministic Execution</p>
+          <h1 class="text-3xl md:text-4xl font-semibold tracking-tight">
+            Deterministic Battle <span class="text-sky-400">Simulator</span>
+          </h1>
+          <p class="mt-2 text-sm md:text-base text-slate-300/80 max-w-xl">
+            Same seed. Same inputs. Same battle.<br class="hidden md:block">
+            Use this UI to explore deterministic, replayable combat traces and their verifiable hashes.
+          </p>
+        </div>
+        <div class="hidden md:flex items-center gap-2 text-xs text-slate-300/70">
+          <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Deterministic mode</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="grid gap-6 md:gap-8 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.1fr)] items-start">
+      <!-- Left column: controls + log -->
+      <section class="space-y-4 md:space-y-6">
+        <!-- Controls -->
+        <div class="glass rounded-2xl p-4 md:p-5 shadow-xl shadow-sky-900/40">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h2 class="text-sm font-semibold tracking-wide text-slate-100">
+              Simulation Controls
+            </h2>
+            <span class="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/40">
+              <span class="h-1.5 w-1.5 rounded-full bg-sky-400 animate-ping"></span>
+              <span>Pure deterministic engine</span>
+            </span>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)] items-end">
+            <div class="space-y-2">
+              <label class="text-xs font-medium text-slate-200 flex items-center justify-between">
+                Seed
+                <button id="randomSeedBtn" class="text-[10px] px-2 py-0.5 rounded-full border border-slate-500/60 text-slate-200 hover:border-sky-400 hover:text-sky-300 transition">
+                  randomize
+                </button>
+              </label>
+              <input
+                id="seedInput"
+                class="w-full rounded-lg border border-slate-600/80 bg-slate-900/40 px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-500/70"
+                placeholder="RAIKU-DEMO-SEED-001"
+              />
+              <p class="text-[11px] text-slate-400">
+                The seed drives all pseudo-randomness. Same seed = same battle trace and hash.
+              </p>
+            </div>
+
+            <div class="space-y-2">
+              <label class="text-xs font-medium text-slate-200 flex items-center justify-between">
+                Max Rounds
+                <span id="maxRoundsLabel" class="text-[11px] text-slate-400">20</span>
+              </label>
+              <input
+                id="maxRoundsInput"
+                type="range"
+                min="5"
+                max="40"
+                value="20"
+                class="w-full accent-sky-400"
+              />
+              <p class="text-[11px] text-slate-400">
+                Upper bound; battle may end earlier if a team is wiped.
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap items-center gap-3 justify-between">
+            <div class="flex items-center gap-2 text-[11px] text-slate-400">
+              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900/70 border border-slate-700/80 text-[10px]">
+                Σ
+              </span>
+              <span>
+                Engine uses a seeded PRNG and is free of
+                <span class="text-sky-300">Math.random()</span>
+                or <span class="text-sky-300">Date.now()</span>.
+              </span>
+            </div>
+            <button
+              id="simulateBtn"
+              class="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-xs font-medium text-slate-950 shadow-lg shadow-sky-500/40 hover:bg-sky-400 active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-wait"
+            >
+              <span class="hidden md:inline">Run deterministic simulation</span>
+              <span class="md:hidden">Simulate</span>
+              <svg id="simulateSpinner" class="h-3.5 w-3.5 animate-spin hidden" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Log + hash -->
+        <div class="glass rounded-2xl p-4 md:p-5 shadow-xl shadow-sky-900/40 h-[320px] md:h-[380px] flex flex-col">
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h2 class="text-sm font-semibold tracking-wide text-slate-100">Battle Trace</h2>
+              <p class="text-[11px] text-slate-400">
+                Replayable execution log for this seed and configuration.
+              </p>
+            </div>
+            <div class="text-right">
+              <p class="text-[11px] text-slate-400 mb-1">Battle Log Hash</p>
+              <code id="hashOutput" class="block text-[10px] font-mono text-sky-300/90 break-all max-w-[240px]">
+                –
+              </code>
+            </div>
+          </div>
+
+          <div id="logContainer" class="mt-2 flex-1 rounded-xl bg-slate-950/40 border border-slate-800/80 px-3 py-2.5 text-[11px] md:text-[12px] overflow-auto scrollbar-thin">
+            <p class="text-slate-500/90">
+              Run a simulation to view the deterministic battle trace.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right column: teams + outcome -->
+      <section class="space-y-4 md:space-y-6">
+        <!-- Teams -->
+        <div class="glass rounded-2xl p-4 md:p-5 shadow-xl shadow-sky-900/40">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <h2 class="text-sm font-semibold tracking-wide text-slate-100">Teams & Stats</h2>
+            <span class="text-[11px] text-slate-400">
+              Static roster · deterministic simulation
+            </span>
+          </div>
+
+          <div class="grid gap-3 md:gap-4 md:grid-cols-2">
+            <!-- Team A -->
+            <div class="rounded-xl border border-sky-500/30 bg-sky-950/40 p-3">
+              <div class="flex items-center justify-between mb-2">
+                <p class="text-[11px] font-semibold tracking-wide text-sky-200 uppercase">Team A</p>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-200 border border-sky-500/40">
+                  Aurora Squadron
+                </span>
+              </div>
+              <div id="teamAStats" class="space-y-2 text-[11px] text-slate-200"></div>
+            </div>
+
+            <!-- Team B -->
+            <div class="rounded-xl border border-violet-500/30 bg-violet-950/40 p-3">
+              <div class="flex items-center justify-between mb-2">
+                <p class="text-[11px] font-semibold tracking-wide text-violet-100 uppercase">Team B</p>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-100 border border-violet-500/40">
+                  Raiku Cohort
+                </span>
+              </div>
+              <div id="teamBStats" class="space-y-2 text-[11px] text-slate-200"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Outcome -->
+        <div class="glass rounded-2xl p-4 md:p-5 shadow-xl shadow-sky-900/40">
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h2 class="text-sm font-semibold tracking-wide text-slate-100">Outcome</h2>
+              <p class="text-[11px] text-slate-400">
+                Canonical result for the current seed and configuration.
+              </p>
+            </div>
+            <span id="winnerPill" class="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-300">
+              <span class="h-1.5 w-1.5 rounded-full bg-slate-500"></span>
+              <span>No battle yet</span>
+            </span>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-2">
+            <div>
+              <p class="text-[11px] text-slate-400 mb-1.5">Winner</p>
+              <p id="winnerOutput" class="text-base font-semibold text-slate-100">
+                –
+              </p>
+              <p class="text-[11px] text-slate-400 mt-0.5">
+                The winner is derived deterministically from remaining HP and wipe conditions.
+              </p>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-400 mb-1.5">Rounds</p>
+              <p id="roundsOutput" class="text-base font-semibold text-slate-100">
+                –
+              </p>
+              <p class="text-[11px] text-slate-400 mt-0.5">
+                Maximum is the configured round cap; battle may end earlier.
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-4 grid gap-3 md:grid-cols-2">
+            <div>
+              <p class="text-[11px] text-slate-400 mb-1">Team A HP snapshot</p>
+              <div id="teamAHealth" class="space-y-2"></div>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-400 mb-1">Team B HP snapshot</p>
+              <div id="teamBHealth" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="mt-8 text-[10px] md:text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
+      <p>
+        Deterministic battle engine · seeded PRNG · SHA-256 log hash · ready to plug into Raiku / Solana flows.
+      </p>
+      <p>
+        Run this page with the same seed in any modern browser to reproduce the same battle trace and hash.
+      </p>
+    </footer>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
