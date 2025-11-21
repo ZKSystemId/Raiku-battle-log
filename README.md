@@ -149,3 +149,5 @@ It is a small but powerful example of how Raiku enables:
 - provable correctness,  
 - clear coordination,  
 - and reproducible compute results in decentralized environments.
+- 
+tweet link : https://x.com/mereal03/status/1991819954023543179?s=20
